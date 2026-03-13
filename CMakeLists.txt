@@ -77,6 +77,10 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 # e.g.
 #add_subdirectory(library/motor_drivers/UserCode)
 add_subdirectory(Modules/BasicComponents)
+add_subdirectory(Modules/MotorDrivers)
+add_subdirectory(Modules/ChassisController)
+add_subdirectory(Modules/Sensors)
+add_subdirectory(Modules/VelocityProfile)
 # =======================================================
 
 # Add linked libraries
@@ -85,4 +89,17 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
         # Add user defined libraries
         utils
+
+        # 电机，底盘，底盘控制器，定位
+        MotorDrivers::DJI
+        MotorDrivers::Controller
+        Chassis::Mecanum4
+        Chassis::ControllerMaster
+        ChassisLocalization::EKF
+
+        # 陀螺仪
+        SensorGyro::HWT101CT
+
+        # 上位机通信
+        protocol::UartRxSync
 )

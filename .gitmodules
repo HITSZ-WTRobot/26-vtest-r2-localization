@@ -10,3 +10,6 @@
 [submodule "Modules/Sensors"]
 	path = Modules/Sensors
 	url = git@github.com:HITSZ-WTRobot-Packages/Sensors.git
+[submodule "Modules/VelocityProfile"]
+	path = Modules/VelocityProfile
+	url = git@github.com:HITSZ-WTRobot-Packages/VelocityProfile.git
