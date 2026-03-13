@@ -76,7 +76,7 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 # ===================== DEPENDENCIES =====================
 # e.g.
 #add_subdirectory(library/motor_drivers/UserCode)
-
+add_subdirectory(Modules/BasicComponents)
 # =======================================================
 
 # Add linked libraries
@@ -84,4 +84,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         stm32cubemx
 
         # Add user defined libraries
+        utils
 )
