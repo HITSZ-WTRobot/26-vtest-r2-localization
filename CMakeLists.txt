@@ -102,4 +102,6 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
         # 上位机通信
         protocol::UartRxSync
+        libs::RingBuffer
+        libs::CRC
 )

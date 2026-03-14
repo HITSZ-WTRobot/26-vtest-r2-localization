@@ -1,6 +1,7 @@
 #include "chassis.hpp"
 #include "cmsis_os2.h"
 #include "device.hpp"
+#include "protocol.hpp"
 #include "tim.h"
 
 void TIM_Callback_1kHz_1(TIM_HandleTypeDef* htim)
@@ -32,6 +33,8 @@ extern "C" void Init(void* argument)
     Device_Init();
 
     Chassis_BeforeUpdate();
+
+    Protocol_Init();
 
     // 启动定时器
     HAL_TIM_RegisterCallback(&htim5, HAL_TIM_PERIOD_ELAPSED_CB_ID, TIM_Callback_1kHz_1);
