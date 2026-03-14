@@ -20,7 +20,8 @@ bool PCProtocol::decode(const uint8_t data[27])
     {
         return false;
     }
-    rx_buffer_.push(*reinterpret_cast<const Frame*>(data));
+    rx_buffer_.push(
+            { .timestamp = HAL_GetTick(), .data = *reinterpret_cast<const Frame::Data*>(data) });
     return true;
 }
 
@@ -38,17 +39,26 @@ void PC_CMD_Processor(void* argument)
     {
         while (!pc_rx->rx_buffer_.empty())
         {
-            PCProtocol::Frame frame{};
-            pc_rx->rx_buffer_.pop(frame);
+            PCProtocol::Frame f{};
+            pc_rx->rx_buffer_.pop(f);
+            const auto [timestamp, frame] = f;
+
+            const auto value = as_float6(frame.data);
 
             switch (frame.cmd)
             {
+            case 0x01: // 对时指令
+                if (!pc_rx->isTimeAligning())
+                    pc_rx->timeAlignStart();
+                pc_rx->timeAlign(timestamp, value[0]);
+                break;
+            case 0x02: // 停止对时指令
+                pc_rx->timeAlignEnd();
             case 0x10: // 停止底盘
                 chassis_->stop();
                 break;
             case 0x11: // 重设坐标系
             {
-                const auto value = as_float6(frame.data);
                 chassis_->stop();
                 // sensor_ops->resetWorldCoordByPose({ value[0], value[1], value[2] });
                 break;
@@ -62,12 +72,13 @@ void PC_CMD_Processor(void* argument)
             }
             case 0x21: // 雷达定位点
             {
-                const auto                         value      = as_float6(frame.data);
-                const float                        timestamp  = value[0];
+                const float                        send_time  = value[0];
                 const float                        lidar_time = value[1];
                 const chassis_loc::LocEKF::Posture pos        = { value[2], value[3], value[4] };
-                // TODO: 时间对齐
-                loc_ekf->updateLidar(pos, static_cast<uint32_t>(lidar_time * 1000));
+
+                const auto lidar_self_time = pc_rx->pcTime2SelfTime(lidar_time);
+
+                loc_ekf->updateLidar(pos, lidar_self_time);
                 break;
             }
             default:;
