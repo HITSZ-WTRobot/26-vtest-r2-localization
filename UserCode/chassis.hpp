@@ -9,9 +9,10 @@
 #include "Master.hpp"
 #include "Mecanum4.hpp"
 
-using Chassis = chassis::controller::Master<chassis::Mecanum4>;
-extern chassis_loc::LocEKF* loc_ekf;
-extern Chassis*             chassis_;
+using ChassisController = chassis::controller::Master;
+using ChassisLoc        = chassis::loc::LocEKF;
+extern ChassisLoc*        loc_ekf;
+extern ChassisController* chassis_;
 
 void Chassis_BeforeUpdate();
 
