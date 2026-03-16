@@ -10,50 +10,67 @@
 #include "usart.h"
 #include "LocEKF.hpp"
 
+#include <cstring>
+
 PCProtocol* pc_rx;
+Clock*      clock_;
 UartRxSync_DefineCallback(pc_rx);
 
-bool PCProtocol::decode(const uint8_t data[27])
+namespace
+{
+uint32_t read_u32(const uint8_t* data)
+{
+    return static_cast<uint32_t>(data[0]) << 24 | data[1] << 16 | data[2] << 8 | data[3];
+}
+uint16_t read_u16(const uint8_t* data)
+{
+    return static_cast<uint16_t>(data[0]) << 8 | data[1];
+}
+} // namespace
+
+bool PCProtocol::decode(const uint8_t data[19])
 {
     // check CRC
-    if (CRC16_Modbus::calc(data, 25) != *reinterpret_cast<const uint16_t*>(data + 25))
+    const uint16_t crc_in_data = read_u16(&data[17]);
+
+    const uint16_t crc = CRC16_Modbus::calc(data, 17);
+    if (crc != crc_in_data)
     {
         return false;
     }
     rx_buffer_.push(
-            { .timestamp = HAL_GetTick(), .data = *reinterpret_cast<const Frame::Data*>(data) });
+            [&](Frame& f)
+            {
+                f.rx_timestamp = HAL_GetTick();
+                f.cmd          = data[0];
+                f.tx_timestamp = read_u32(&data[13]);
+                f.crc16        = crc_in_data;
+                memcpy(f.data, data + 1, 2 * 6);
+            });
     return true;
 }
 
-static std::array<float, 6> as_float6(const uint8_t* data)
-{
-    std::array<float, 6> result{};
-    for (int i = 0; i < 6; ++i)
-        result[i] = *reinterpret_cast<const float*>(data + i * sizeof(float));
-    return result;
-}
-
+[[noreturn]]
 void PC_CMD_Processor(void* argument)
 {
     for (;;)
     {
         while (!pc_rx->rx_buffer_.empty())
         {
-            PCProtocol::Frame f{};
-            pc_rx->rx_buffer_.pop(f);
-            const auto [timestamp, frame] = f;
+            const auto f = pc_rx->rx_buffer_.pop();
 
-            const auto value = as_float6(frame.data);
+            const auto [rx_timestamp, cmd, data, tx_timestamp, crc] = *f;
 
-            switch (frame.cmd)
+            clock_->align(static_cast<float>(rx_timestamp),
+                          static_cast<float>(tx_timestamp) + pc_rx->transitionDelayMS());
+
+            constexpr auto toPos = [](const uint16_t a) { return static_cast<float>(a) / 2000.0f; };
+            constexpr auto toVel = [](const uint16_t a) { return static_cast<float>(a) / 2000.0f; };
+
+            switch (cmd)
             {
-            case 0x01: // 对时指令
-                if (!pc_rx->isTimeAligning())
-                    pc_rx->timeAlignStart();
-                pc_rx->timeAlign(timestamp, value[0]);
+            case 0x01: // ping
                 break;
-            case 0x02: // 停止对时指令
-                pc_rx->timeAlignEnd();
             case 0x10: // 停止底盘
                 chassis_->stop();
                 break;
@@ -72,11 +89,13 @@ void PC_CMD_Processor(void* argument)
             }
             case 0x21: // 雷达定位点
             {
-                const float                        send_time  = value[0];
-                const float                        lidar_time = value[1];
-                const chassis_loc::LocEKF::Posture pos        = { value[2], value[3], value[4] };
+                const chassis::Posture pos = { toPos(read_u16(&data[0])),
+                                               toPos(read_u16(&data[2])),
+                                               toPos(read_u16(&data[4])) };
 
-                const auto lidar_self_time = pc_rx->pcTime2SelfTime(lidar_time);
+                const uint32_t lidar_time = read_u32(data + 6);
+
+                const auto lidar_self_time = clock_->pcTime2SelfTime(lidar_time);
 
                 loc_ekf->updateLidar(pos, lidar_self_time);
                 break;
@@ -99,6 +118,8 @@ void Protocol_Init()
     UartRxSync_RegisterCallback(pc_rx, PCUart);
 
     pc_rx = new PCProtocol(PCUart);
+
+    clock_ = new Clock();
 
     if (!pc_rx->startReceive())
         Error_Handler();
