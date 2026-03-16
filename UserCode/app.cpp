@@ -2,13 +2,19 @@
 #include "cmsis_os2.h"
 #include "device.hpp"
 #include "protocol.hpp"
+#include "system.hpp"
 #include "tim.h"
+bool init_pos_received = false;
+
+uint32_t pc_time;
 
 void TIM_Callback_1kHz_1(TIM_HandleTypeDef* htim)
 {
     Device_Update_1kHz();
 
     service::Watchdog::EatAll();
+
+    pc_time = clock_->getPCTime();
 }
 
 void TIM_Callback_1kHz_2(TIM_HandleTypeDef* htim)
@@ -32,7 +38,7 @@ extern "C" void Init(void* argument)
 
     Device_Init();
 
-    Chassis_BeforeUpdate();
+    ChassisMotion_Init();
 
     Protocol_Init();
 
@@ -42,7 +48,17 @@ extern "C" void Init(void* argument)
     HAL_TIM_Base_Start_IT(&htim5);
     HAL_TIM_OC_Start_IT(&htim5, TIM_CHANNEL_1);
 
+    while (!init_pos_received)
+        osDelay(1);
+
+    ChassisLoc_Init();
+
+    Device_WaitAllConnected();
+
     osDelay(2000);
+
+    for (;;)
+        osDelay(1);
 
     Chassis_Init();
 

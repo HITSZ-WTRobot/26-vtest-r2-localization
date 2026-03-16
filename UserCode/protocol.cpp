@@ -9,6 +9,7 @@
 #include "device.hpp"
 #include "usart.h"
 #include "LocEKF.hpp"
+#include "system.hpp"
 
 #include <cstring>
 
@@ -93,6 +94,11 @@ void PC_CMD_Processor(void* argument)
                                                toPos(read_u16(&data[2])),
                                                toPos(read_u16(&data[4])) };
 
+                if (!init_pos_received)
+                {
+                    init_pos          = pos;
+                    init_pos_received = true;
+                }
                 const uint32_t lidar_time = read_u32(data + 6);
 
                 const auto lidar_self_time = clock_->pcTime2SelfTime(lidar_time);

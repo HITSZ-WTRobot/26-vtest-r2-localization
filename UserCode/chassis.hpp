@@ -11,10 +11,15 @@
 
 using ChassisController = chassis::controller::Master;
 using ChassisLoc        = chassis::loc::LocEKF;
+
 extern ChassisLoc*        loc_ekf;
 extern ChassisController* chassis_;
 
-void Chassis_BeforeUpdate();
+extern chassis::Posture init_pos;
+
+void ChassisMotion_Init();
+
+void ChassisLoc_Init();
 
 void Chassis_Init();
 

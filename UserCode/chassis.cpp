@@ -21,14 +21,12 @@ constexpr PIDMotor::Config motor_wheel_vel_pid = { //
     .abs_output_max = 8000.0f
 };
 
-void Chassis_BeforeUpdate()
+void ChassisMotion_Init()
 {
-    using controllers::MotorVelController, chassis::loc::LocEKF, chassis::motion::Mecanum4;
+    using controllers::MotorVelController, chassis::motion::Mecanum4;
 
     for (size_t i = 0; i < 4; ++i)
         motor_vel_ctrl[i] = new MotorVelController(motor_wheel[i], { motor_wheel_vel_pid });
-
-    constexpr auto sq = [](const float a) { return a * a; };
 
     mecanum4 = new Mecanum4({
             .wheel_radius      = 77.0f,   ///< 轮子半径 (unit: mm)
@@ -40,9 +38,18 @@ void Chassis_BeforeUpdate()
             .wheel_rear_left   = motor_vel_ctrl[0], ///< 左后方
             .wheel_rear_right  = motor_vel_ctrl[1], ///< 右后方
     });
+}
+
+chassis::Posture init_pos;
+
+void ChassisLoc_Init()
+{
+    using chassis::loc::LocEKF;
+
+    constexpr auto sq = [](const float a) { return a * a; };
 
     loc_ekf = new LocEKF(*mecanum4,
-                         { .x_init = { 0, 0, 0 },
+                         { .x_init = { init_pos.x, init_pos.y, init_pos.yaw },
                            .covQ   = { sq(0.1), sq(0.1), sq(10) },
                            .noiseQ = { sq(0.05), sq(0.5), sq(0.01) },
                            .noiseR = { .gyro = { sq(0.1) }, .lidar = { sq(0.01), sq(0.5) } } },
