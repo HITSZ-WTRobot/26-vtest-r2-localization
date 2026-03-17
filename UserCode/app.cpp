@@ -19,11 +19,13 @@ void TIM_Callback_1kHz_1(TIM_HandleTypeDef* htim)
 
 void TIM_Callback_1kHz_2(TIM_HandleTypeDef* htim)
 {
+    // if (init_pos_received)
     Chassis_Update_1kHz();
 }
 
 void TIM_Callback_100Hz(TIM_HandleTypeDef* htim)
 {
+    // if (init_pos_received)
     Chassis_Update_100Hz();
 }
 
