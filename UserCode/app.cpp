@@ -55,6 +55,8 @@ extern "C" void Init(void* argument)
     HAL_TIM_RegisterCallback(&htim5, HAL_TIM_OC_DELAY_ELAPSED_CB_ID, TIM_Callback_1kHz_2);
     HAL_TIM_Base_Start_IT(&htim5);
     HAL_TIM_OC_Start_IT(&htim5, TIM_CHANNEL_1);
+    HAL_TIM_RegisterCallback(&htim13, HAL_TIM_PERIOD_ELAPSED_CB_ID, TIM_Callback_100Hz);
+    HAL_TIM_Base_Start_IT(&htim13);
 
     // while (!init_pos_received)
     //     osDelay(1);
