@@ -13,9 +13,8 @@
 
 #include <cstring>
 
-PCProtocol* pc_rx;
-Clock*      clock_;
-UartRxSync_DefineCallback(pc_rx);
+namespace Protocol
+{
 
 namespace
 {
@@ -73,11 +72,11 @@ void PC_CMD_Processor(void* argument)
             case 0x01: // ping
                 break;
             case 0x10: // 停止底盘
-                chassis_->stop();
+                Chassis::ctrl->stop();
                 break;
             case 0x11: // 重设坐标系
             {
-                chassis_->stop();
+                Chassis::ctrl->stop();
                 // sensor_ops->resetWorldCoordByPose({ value[0], value[1], value[2] });
                 break;
             }
@@ -94,16 +93,19 @@ void PC_CMD_Processor(void* argument)
                                                toPos(read_u16(&data[2])),
                                                toPos(read_u16(&data[4])) };
 
-                if (!init_pos_received)
+                if (!System::Init::posReceived)
                 {
-                    init_pos          = pos;
-                    init_pos_received = true;
+                    System::Init::pos         = pos;
+                    System::Init::posReceived = true;
+
+                    System::Init::initPosReceived();
                 }
                 const uint32_t lidar_time = read_u32(data + 6);
 
                 const auto lidar_self_time = clock_->pcTime2SelfTime(lidar_time);
 
-                loc_ekf->updateLidar(pos, lidar_self_time);
+                if (Chassis::loc != nullptr)
+                    Chassis::loc->updateLidar(pos, lidar_self_time);
                 break;
             }
             default:;
@@ -119,11 +121,11 @@ osThreadAttr_t processor_attr{
     .priority   = osPriorityRealtime,
 };
 
-void Protocol_Init()
+void init()
 {
-    UartRxSync_RegisterCallback(pc_rx, PCUart);
+    UartRxSync_RegisterCallback(pc_rx, config::uart::PCUart);
 
-    pc_rx = new PCProtocol(PCUart);
+    pc_rx = new PCProtocol(config::uart::PCUart);
 
     clock_ = new Clock();
 
@@ -132,3 +134,5 @@ void Protocol_Init()
 
     osThreadNew(PC_CMD_Processor, nullptr, &processor_attr);
 }
+
+} // namespace Protocol

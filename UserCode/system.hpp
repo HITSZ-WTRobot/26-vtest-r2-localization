@@ -5,4 +5,21 @@
  */
 #pragma once
 
-extern bool init_pos_received;
+namespace System
+{
+
+// 初始化过程变量
+namespace Init
+{
+inline bool             posReceived = false;
+inline chassis::Posture pos{};
+// hook
+extern void initPosReceived();
+
+inline bool inited()
+{
+    return posReceived;
+}
+} // namespace Init
+
+} // namespace System

@@ -10,23 +10,23 @@ uint32_t pc_time;
 
 void TIM_Callback_1kHz_1(TIM_HandleTypeDef* htim)
 {
-    Device_Update_1kHz();
+    Device::update_1kHz();
 
     service::Watchdog::EatAll();
 
-    pc_time = clock_->getPCTime();
+    pc_time = Protocol::clock_->getPCTime();
 }
 
 void TIM_Callback_1kHz_2(TIM_HandleTypeDef* htim)
 {
     // if (init_pos_received)
-    Chassis_Update_1kHz();
+    Chassis::update_1kHz();
 }
 
 void TIM_Callback_100Hz(TIM_HandleTypeDef* htim)
 {
     // if (init_pos_received)
-    Chassis_Update_100Hz();
+    Chassis::update_100Hz();
 }
 
 chassis::Posture  pos;
@@ -44,13 +44,11 @@ extern "C" void Init(void* argument)
 {
     /* 初始化代码 */
 
-    Device_Init();
+    Device::init();
 
-    ChassisMotion_Init();
+    Chassis::motionInit();
 
-    Protocol_Init();
-
-    ChassisLoc_Init();
+    Protocol::init();
 
     // 启动定时器
     HAL_TIM_RegisterCallback(&htim5, HAL_TIM_PERIOD_ELAPSED_CB_ID, TIM_Callback_1kHz_1);
@@ -60,44 +58,71 @@ extern "C" void Init(void* argument)
     HAL_TIM_RegisterCallback(&htim13, HAL_TIM_PERIOD_ELAPSED_CB_ID, TIM_Callback_100Hz);
     HAL_TIM_Base_Start_IT(&htim13);
 
-    // while (!init_pos_received)
-    //     osDelay(1);
-
-    Device_WaitAllConnected();
+    Device::waitAllConnected();
 
     osDelay(2000);
 
-    Chassis_Init();
+    // waiting for system inited
+    // while (!System::Init::inited())
+    //     osDelay(1);
 
-    using namespace chassis;
-    Velocity v = vel;
-    Posture  p = pos;
+    constexpr chassis::Posture init = { 0, 0, 0 };
+    Chassis::locCtrlInit(init);
+
+    Chassis::ctrl->enable();
+
+    chassis::Velocity v = vel;
+    chassis::Posture  p = pos;
+
+    osDelay(5000);
 
     for (;;)
     {
-        if (s == 0)
-        {
-            chassis_->stop();
-        }
-        else if (s == 1)
-        {
-            if (vel.vx != v.vx || vel.vy != v.vy || vel.wz != v.wz)
-            {
-                v = vel;
-                chassis_->setVelocityInBody(v, false);
-            }
-        }
-        else if (s == 2)
-        {
-            if (pos.x != p.x || pos.y != p.y || pos.yaw != p.yaw)
-            {
-                p = pos;
-                chassis_->setTargetPostureInWorld(p);
-            }
-        }
-
-        osDelay(1);
+        // Chassis::ctrl->setTargetPostureInWorld({0, 0, 0});
+        // Chassis::ctrl->waitTrajectoryFinish();
+        // osDelay(500);
+        Chassis::ctrl->setTargetPostureInWorld({ 3, 0, 0 });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(500);
+        Chassis::ctrl->setTargetPostureInWorld({ 3, 0, 90 });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(500);
+        Chassis::ctrl->setTargetPostureInWorld({ 3, -3, 135 });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(500);
+        Chassis::ctrl->setTargetPostureInWorld({ 0, 0, 135 });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(500);
+        Chassis::ctrl->setTargetPostureInWorld({ 0, 0, 0 });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(10000);
     }
+
+    // for (;;)
+    // {
+    //     if (s == 0)
+    //     {
+    //         Chassis::ctrl->stop();
+    //     }
+    //     else if (s == 1)
+    //     {
+    //         if (vel.vx != v.vx || vel.vy != v.vy || vel.wz != v.wz)
+    //         {
+    //             v = vel;
+    //             Chassis::ctrl->setVelocityInBody(v, false);
+    //         }
+    //     }
+    //     else if (s == 2)
+    //     {
+    //         if (pos.x != p.x || pos.y != p.y || pos.yaw != p.yaw)
+    //         {
+    //             p = pos;
+    //             Chassis::ctrl->setTargetPostureInWorld(p);
+    //         }
+    //     }
+
+    //     osDelay(1);
+    // }
 
     /* 初始化完成后退出线程 */
     osThreadExit();

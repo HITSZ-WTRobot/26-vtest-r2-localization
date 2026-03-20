@@ -8,6 +8,9 @@
 #include "UartRxSync.hpp"
 #include "RingBuffer.hpp"
 
+namespace Protocol
+{
+
 // 上位机指令接收
 // 协议 AA BB | CMD | 6 float | CRC16
 using CRC16_Modbus = crc::CRCX<16, 0x8005, 0xFFFF, true, true, 0x0000>;
@@ -78,7 +81,8 @@ protected:
 private:
 };
 
-extern PCProtocol* pc_rx;
-extern Clock*      clock_;
+inline PCProtocol* pc_rx;
+inline Clock*      clock_;
 
-void Protocol_Init();
+void init();
+} // namespace Protocol
