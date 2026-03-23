@@ -47,13 +47,14 @@ void locCtrlInit(const chassis::Posture& init_pos)
 
     const auto init_gyro_yaw = Device::sensor::gyro_yaw->getYaw();
 
-    loc = new LocEKF(*motion,
-                     { .x_init = { init_pos.x, init_pos.y, init_gyro_yaw, init_pos.yaw - init_gyro_yaw },
-                       .covQ   = { sq(0.1), sq(0.1), sq(10) },
-                       .noiseQ = { sq(0.05), sq(0.5), sq(0.01) },
-                       .noiseR = { .gyro = { sq(0.1) }, .lidar = { sq(0.01), sq(0.5) } } },
-                     *Device::sensor::gyro_yaw,
-                     1);
+    loc = new LocEKF(
+            *motion,
+            { .x_init = { init_pos.x, init_pos.y, init_gyro_yaw, init_pos.yaw - init_gyro_yaw },
+              .covP   = { sq(0.1), sq(0.1), sq(10) },
+              .noiseQ = { sq(0.05), sq(0.5), sq(0.01) },
+              .noiseR = { .gyro = { sq(0.1) }, .lidar = { sq(0.01), sq(0.5) } } },
+            *Device::sensor::gyro_yaw,
+            1);
 
     ctrl = new ChassisController(*motion, *loc,
                         {
@@ -102,7 +103,6 @@ void update_100Hz()
     if (ctrl != nullptr)
         ctrl->profileUpdate(0.01);
 }
-
 } // namespace Chassis
 
 // 系统初始化钩子

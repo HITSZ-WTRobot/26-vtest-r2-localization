@@ -78,6 +78,8 @@ protected:
 
     bool decode(const uint8_t data[19]) override;
 
+    [[nodiscard]] uint32_t timeout() const override { return 250; }
+
 private:
 };
 

@@ -26,6 +26,10 @@ uint16_t read_u16(const uint8_t* data)
 {
     return static_cast<uint16_t>(data[0]) << 8 | data[1];
 }
+int16_t read_i16(const uint8_t* data)
+{
+    return static_cast<int16_t>(data[0] << 8 | data[1]);
+}
 } // namespace
 
 bool PCProtocol::decode(const uint8_t data[19])
@@ -64,8 +68,9 @@ void PC_CMD_Processor(void* argument)
             clock_->align(static_cast<float>(rx_timestamp),
                           static_cast<float>(tx_timestamp) + pc_rx->transitionDelayMS());
 
-            constexpr auto toPos = [](const uint16_t a) { return static_cast<float>(a) / 2000.0f; };
-            constexpr auto toVel = [](const uint16_t a) { return static_cast<float>(a) / 2000.0f; };
+            constexpr auto toPos = [](const int16_t a) { return static_cast<float>(a) / 2000.0f; };
+            constexpr auto toAngle = [](const int16_t a) { return static_cast<float>(a) / 100.0f; };
+            constexpr auto toVel = [](const int16_t a) { return static_cast<float>(a) / 2000.0f; };
 
             switch (cmd)
             {
@@ -89,9 +94,9 @@ void PC_CMD_Processor(void* argument)
             }
             case 0x21: // 雷达定位点
             {
-                const chassis::Posture pos = { toPos(read_u16(&data[0])),
-                                               toPos(read_u16(&data[2])),
-                                               toPos(read_u16(&data[4])) };
+                const chassis::Posture pos = { toPos(read_i16(&data[0])),
+                                               toPos(read_i16(&data[2])),
+                                               toAngle(read_i16(&data[4])) };
 
                 if (!System::Init::posReceived)
                 {
