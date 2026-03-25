@@ -4,6 +4,7 @@
  * @date    2026-02-24
  */
 #pragma once
+#include "IChassisDef.hpp"
 #include "crc.hpp"
 #include "UartRxSync.hpp"
 #include "RingBuffer.hpp"
@@ -55,6 +56,24 @@ class PCProtocol final : public protocol::UartRxSync<HeaderLen, FrameLen>
 public:
     explicit PCProtocol(UART_HandleTypeDef* huart) : UartRxSync(huart) {}
 
+    static void TaskEntry(void* argument) { static_cast<PCProtocol*>(argument)->loop(); }
+
+    [[nodiscard]] float transitionDelayMS() const
+    {
+        return FrameLen * 10 * 1000.0f / static_cast<float>(huart()->Init.BaudRate);
+    }
+
+    [[nodiscard]] const Clock& clock() const { return clock_; }
+
+protected:
+    static constexpr std::array<uint8_t, 2>     HEADER = { 0xAA, 0xBB };
+    [[nodiscard]] const std::array<uint8_t, 2>& header() const override { return HEADER; }
+
+    bool decode(const uint8_t data[19]) override;
+
+    [[nodiscard]] uint32_t timeout() const override { return 250; }
+
+private:
     struct Frame
     {
         uint32_t rx_timestamp;
@@ -67,24 +86,27 @@ public:
     // libs::RingBuffer<>
     libs::RingBuffer<Frame, 10> rx_buffer_{};
 
-    [[nodiscard]] float transitionDelayMS() const
+    // 接收到的有效消息数
+    uint32_t msg_cnt_ = 0;
+
+    struct
     {
-        return FrameLen * 10 * 1000.0f / static_cast<float>(huart()->Init.BaudRate);
-    }
+        struct
+        {
+            chassis::Posture last_rcv_posture{};           // 上次接收的的位姿
+            uint32_t         last_rcv_posture_timestamp{}; // 上次接收到的位姿时间戳
+            uint32_t         last_rcv_timestamp{};         // 上次接收到位姿的时间戳
+        } lidar;
+    } debug_{};
 
-protected:
-    static constexpr std::array<uint8_t, 2>     HEADER = { 0xAA, 0xBB };
-    [[nodiscard]] const std::array<uint8_t, 2>& header() const override { return HEADER; }
+    [[noreturn]] void loop();
 
-    bool decode(const uint8_t data[19]) override;
+    void cmdHandler(Frame& f);
 
-    [[nodiscard]] uint32_t timeout() const override { return 250; }
-
-private:
+    Clock clock_;
 };
 
 inline PCProtocol* pc_rx;
-inline Clock*      clock_;
 
 void init();
 } // namespace Protocol
