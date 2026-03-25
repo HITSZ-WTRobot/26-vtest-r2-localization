@@ -2,23 +2,45 @@
  * @file    device.hpp
  * @author  syhanjin
  * @date    2026-03-13
+ * @attention requires C++ version >= C++17
  */
 #pragma once
 #include "HWT101CT.hpp"
 #include "dji.hpp"
 #include "usart.h"
 
-extern motors::DJIMotor* motor_wheel[4];
+namespace config::uart
+{
+inline UART_HandleTypeDef* SensorGyroYawUart = &huart2;
+inline UART_HandleTypeDef* PCUart            = &huart3;
+} // namespace config::uart
 
-constexpr UART_HandleTypeDef*   SensorGyroYawUart = &huart2;
-extern sensors::gyro::HWT101CT* sensor_gyro_yaw;
+namespace Device
+{
 
-constexpr UART_HandleTypeDef* PCUart = &huart3;
+// sensors
+namespace sensor
+{
+/**
+ * Z 轴高精度陀螺仪
+ */
+inline sensors::gyro::HWT101CT* gyro_yaw = nullptr;
+} // namespace sensor
 
-void Device_Init();
+// motors
+namespace motor
+{
+/**
+ * 底盘电机
+ */
+inline motors::DJIMotor* wheel[4] = { nullptr };
+} // namespace motor
 
-void Device_Update_1kHz();
+// functions
 
-bool Device_isAllConnected();
+void init();
+void update_1kHz();
+bool isAllConnected();
+void waitAllConnected();
 
-void Device_WaitAllConnected();
+} // namespace Device

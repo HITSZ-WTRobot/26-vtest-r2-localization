@@ -4,28 +4,27 @@
  * @date    2026-03-13
  */
 #include "device.hpp"
-
 #include "can.h"
 #include "cmsis_os2.h"
 
-motors::DJIMotor* motor_wheel[4];
+namespace Device
+{
 
-sensors::gyro::HWT101CT* sensor_gyro_yaw;
+namespace
+{
 
-UartRxSync_DefineCallback(sensor_gyro_yaw);
-
-static void sensor_init()
+void sensor_init()
 {
     using sensors::gyro::HWT101CT;
 
-    sensor_gyro_yaw = new HWT101CT(SensorGyroYawUart);
-    UartRxSync_RegisterCallback(sensor_gyro_yaw, SensorGyroYawUart);
+    sensor::gyro_yaw = new HWT101CT(config::uart::SensorGyroYawUart);
+    UartRxSync_RegisterCallback(Device::sensor::gyro_yaw, config::uart::SensorGyroYawUart);
 
-    if (!sensor_gyro_yaw->startReceive())
+    if (!sensor::gyro_yaw->startReceive())
         Error_Handler();
 }
 
-static void can_init()
+void can_init()
 {
     // CAN 初始化
     motors::DJIMotor::CAN_FilterInit(&hcan1, 0);
@@ -67,14 +66,15 @@ constexpr motors::DJIMotor::Config motor_wheel_config[4] = {
     },
 };
 
-static void motor_wheel_init()
+void motor_wheel_init()
 {
     using motors::DJIMotor;
     for (size_t i = 0; i < 4; ++i)
-        motor_wheel[i] = new DJIMotor(motor_wheel_config[i]);
+        motor::wheel[i] = new DJIMotor(motor_wheel_config[i]);
 }
+} // namespace
 
-void Device_Init()
+void init()
 {
     sensor_init();
 
@@ -83,26 +83,30 @@ void Device_Init()
     motor_wheel_init();
 }
 
-void Device_Update_1kHz()
+void update_1kHz()
 {
     motors::DJIMotor::SendIqCommand(&hcan1, motors::DJIMotor::IqSetCMDGroup::IqCMDGroup_1_4);
     motors::DJIMotor::SendIqCommand(&hcan1, motors::DJIMotor::IqSetCMDGroup::IqCMDGroup_5_8);
 }
 
-bool Device_isAllConnected()
+bool isAllConnected()
 {
+    constexpr auto def_and_connected = [](auto a) { return a && a->isConnected(); };
+
     // sensor
-    if (!sensor_gyro_yaw->isConnected())
+    if (!def_and_connected(Device::sensor::gyro_yaw))
         return false;
 
-    for (auto& m : motor_wheel)
-        if (!m->isConnected())
+    for (auto& m : Device::motor::wheel)
+        if (!def_and_connected(m))
             return false;
 
     return true;
 }
-void Device_WaitAllConnected()
+void waitAllConnected()
 {
-    while (!Device_isAllConnected())
+    while (!isAllConnected())
         osDelay(1);
 }
+
+} // namespace Device
