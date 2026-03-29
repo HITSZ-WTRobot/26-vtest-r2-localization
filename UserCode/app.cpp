@@ -1,3 +1,4 @@
+#include "IChassisDef.hpp"
 #include "chassis.hpp"
 #include "cmsis_os2.h"
 #include "device.hpp"
@@ -5,11 +6,15 @@
 #include "system.hpp"
 #include "tim.h"
 
+uint32_t now;
+
 void TIM_Callback_1kHz_1(TIM_HandleTypeDef* htim)
 {
     Device::update_1kHz();
 
     service::Watchdog::EatAll();
+
+    now = HAL_GetTick();
 }
 
 void TIM_Callback_1kHz_2(TIM_HandleTypeDef* htim)
@@ -23,6 +28,8 @@ void TIM_Callback_100Hz(TIM_HandleTypeDef* htim)
     // if (init_pos_received)
     Chassis::update_100Hz();
 }
+
+volatile bool can_run = false;
 
 /**
  * @brief Function implementing the initTask thread.
@@ -55,8 +62,66 @@ extern "C" [[noreturn]] void Init(void* argument)
     while (!System::Init::inited())
         osDelay(1);
 
+    osDelay(1000);
+
     Chassis::ctrl->enable();
 
+    // Chassis::ctrl->setTargetPostureInWorld({3.5f, 0.0f, 0.0f});
+    // Chassis::ctrl->waitTrajectoryFinish();
+    // osDelay(1000);
+    // Chassis::ctrl->setTargetPostureInWorld({3.5f, 0.0f, -90.0f});
+    // Chassis::ctrl->waitTrajectoryFinish();
+    // osDelay(1000);
+    // Chassis::ctrl->setTargetPostureInWorld({3.5f, -3.5f, -90.0f});
+    // Chassis::ctrl->waitTrajectoryFinish();
+    // osDelay(1000);
+    // Chassis::ctrl->setTargetPostureInWorld({3.5f, -3.5f, -180.0f});
+    // Chassis::ctrl->waitTrajectoryFinish();
+    // osDelay(1000);
+    // Chassis::ctrl->setTargetPostureInWorld({0.0f, -3.5f, -180.0f});
+    // Chassis::ctrl->waitTrajectoryFinish();
+    // osDelay(1000);
+    // Chassis::ctrl->setTargetPostureInWorld({0.0f, 0.0f, -180.0f});
+    // Chassis::ctrl->waitTrajectoryFinish();
+    // osDelay(1000);
+    // Chassis::ctrl->setTargetPostureInWorld({0.0f, 0.0f, 0.0f});
+    // Chassis::ctrl->waitTrajectoryFinish();
+    osDelay(2000);
+    // while (!can_run)
+    // {
+    //     osDelay(2000);
+    // }
+    osDelay(8000);
+
+    auto [x, y, yaw] = System::Init::pos;
+
+    for (size_t i = 0; i < 8; ++i)
+    {
+        Chassis::ctrl->setTargetPostureInWorld({ 2.0f + x, 0.0f + y, 0.0f + yaw });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(1000);
+        Chassis::ctrl->setTargetPostureInWorld({ 2.0f + x, 0.0f + y, 90.0f + yaw });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(1000);
+        Chassis::ctrl->setTargetPostureInWorld({ 2.0f + x, 2.0f + y, 90.0f + yaw });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(1000);
+        Chassis::ctrl->setTargetPostureInWorld({ 2.0f + x, 2.0f + y, 180.0f + yaw });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(1000);
+        Chassis::ctrl->setTargetPostureInWorld({ 0.0f + x, 2.0f + y, 180.0f + yaw });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(1000);
+        Chassis::ctrl->setTargetPostureInWorld({ 0.0f + x, 2.0f + y, 90.0f + yaw });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(1000);
+        Chassis::ctrl->setTargetPostureInWorld({ 0.0f + x, 0.0f + y, 90.0f + yaw });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(1000);
+        Chassis::ctrl->setTargetPostureInWorld({ 0.0f + x, 0.0f + y, 0.0f + yaw });
+        Chassis::ctrl->waitTrajectoryFinish();
+        osDelay(1000);
+    }
     /* 初始化完成后退出线程 */
     osThreadExit();
 }
