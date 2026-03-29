@@ -96,6 +96,7 @@ private:
             chassis::Posture last_rcv_posture{};           // 上次接收的的位姿
             uint32_t         last_rcv_posture_timestamp{}; // 上次接收到的位姿时间戳
             uint32_t         last_rcv_timestamp{};         // 上次接收到位姿的时间戳
+            int32_t          last_rcv_delay{};
         } lidar;
     } debug_{};
 

@@ -107,6 +107,8 @@ void PCProtocol::cmdHandler(Frame& f)
 
         debug_.lidar.last_rcv_posture_timestamp = lidar_self_time;
         debug_.lidar.last_rcv_timestamp         = HAL_GetTick();
+        debug_.lidar.last_rcv_delay = static_cast<int>(debug_.lidar.last_rcv_timestamp) -
+                                      static_cast<int>(lidar_self_time);
 
         if (!System::Init::posReceived)
         {
@@ -147,7 +149,7 @@ void PCProtocol::loop()
 
 osThreadAttr_t processor_attr{
     .name       = "pc-cmd-processor",
-    .stack_size = 256 * 4,
+    .stack_size = 1024 * 4,
     .priority   = osPriorityRealtime,
 };
 
