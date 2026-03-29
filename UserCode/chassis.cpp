@@ -59,14 +59,14 @@ void locCtrlInit(const chassis::Posture& init_pos)
     ctrl = new ChassisController(*motion, *loc,
                         {
                             .posture_error_pd_cfg = {
-                                .vx = { .Kp = 5, .Kd = 3.0f, .abs_output_max = 0.1f },
-                                .vy = { .Kp = 5, .Kd = 3.0f, .abs_output_max = 0.1f },
+                                .vx = { .Kp = 7.0f, .Kd = 3.8f, .abs_output_max = 3.0f },
+                                .vy = { .Kp = 7.0, .Kd = 3.8f, .abs_output_max = 3.0f },
                                 .wz = { .Kp = 30, .Kd = 4.0f, .abs_output_max = 25.0f },
                             },
                             .limit = {
-                                .x = { .max_spd = 1.0f, .max_acc = 1.2f, .max_jerk = 20.0f },
-                                .y   = { .max_spd = 1.0f, .max_acc = 1.2f, .max_jerk = 20.0f },
-                                .yaw = { .max_spd = 90, .max_acc = 45, .max_jerk = 90 }
+                                .x = { .max_spd = 8.0f, .max_acc = 3.0f, .max_jerk = 50.0f },
+                                .y   = { .max_spd = 8.0f, .max_acc = 3.0f, .max_jerk = 50.0f },
+                                .yaw = { .max_spd = 720, .max_acc = 360, .max_jerk = 1080 }
                             }
                         });
 }
